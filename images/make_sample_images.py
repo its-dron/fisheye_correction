@@ -3,7 +3,6 @@
 #####################################################
 import numpy as np
 import cv2
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
 # Image of vertical stripes
@@ -75,8 +74,8 @@ m2 = y_p.astype(np.float32)
 
 
 distorted_im = cv2.remap(stripes, 
-                         x_p.astype(np.float32), 
-                         y_p.astype(np.float32), 
+                         m1,
+                         m2,
                          interpolation=cv2.INTER_LINEAR)
 
 cv2.imwrite('stripes_distorted.png', distorted_im)
@@ -85,5 +84,6 @@ cv2.imwrite('stripes_distorted.png', distorted_im)
 #plt.scatter(x_p, y_p, marker='.')
 #plt.axis('equal')
 #plt.show()
-#plt.imshow(distorted_im)
-#plt.axis('equal')
+plt.imshow(distorted_im)
+plt.axis('equal')
+plt.show()
