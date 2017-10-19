@@ -45,11 +45,10 @@ r = np.sqrt(x_c**2 + y_c**2)
 th = np.arctan(r)
 
 th_2 = th*th
-th_3 = th_2*th
-th_5 = th_3*th_2
-th_7 = th_5*th_2
-th_9 = th_7*th_2
-th_d = th + d[0]*th_3 + d[1]*th_5 + d[2]*th_7 + d[3]*th_9
+th_4 = th_2*th_2
+th_6 = th_4*th_2
+th_8 = th_6*th_2
+th_d = th * (1 + d[0]*th_2 + d[1]*th_4 + d[2]*th_6 + d[3]*th_8)
 
 # These apply undistortion
 #scale = r
