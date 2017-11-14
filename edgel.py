@@ -25,17 +25,39 @@ def objective_fn(h_1d):
     c = -np.sum(h_1d * np.log2(h_1d))
     return c
 
-def main():
-    im = cv2.imread(INPUT_IM_PATH, 0) # Read image as grayscale
-    im = cv2.resize(im, WORKING_RES)
+
+def hough_entropy(edges):
+    pass
+
+
+def computeEdgeSaliency(im, edge_ratio=2):
+    """
+    Compute the edge saliency of the grayscale image `im`.
+
+    Inputs:
+        im         - grayscale image
+        edge_ratio - minimum ratio of max to min eigenvlue to count as edge
+
+    Returns:
+        edgels     - edge saliency image. Same shape as `im`
+    """
 
     # compute gradient images
     st = structure_tensor(im)
     eig_max, eig_min = structure_tensor_eigvals(*st)
 
-    phi = eig_max - (EDGEY_RATIO * eig_min)
+    phi = eig_max - (edge_ratio * eig_min)
     edge_sal = phi
     edge_sal[edge_sal<0] = 0
+
+    return edge_sal
+
+
+def main():
+    im = cv2.imread(INPUT_IM_PATH, 0) # Read image as grayscale
+    im = cv2.resize(im, WORKING_RES)
+
+    edge_sal = computeEdgeSaliency(im, edge_ratio = EDGEY_RATIO)
 
     #plt.imshow(edge_sal)
     #plt.title('Edge Saliency')
@@ -61,7 +83,6 @@ def main():
     plt.figure()
     plt.plot(h_1d)
     plt.show()
-
 
 if __name__=='__main__':
     main()
