@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import os
 from skimage.feature import structure_tensor, structure_tensor_eigvals
 from skimage.transform import hough_line, hough_line_peaks
+from scipy.optimize import minimize
 
 import ipdb as pdb
 
