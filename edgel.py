@@ -16,6 +16,14 @@ INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_distorted.png')
 EDGEY_RATIO = 2
 N_THETA = 180
 
+def objective_fn(h_1d):
+    '''
+    Compute the 1D hough entropy
+    '''
+    h_1d /= np.sum(h_1d) # Normalize the 1D hough
+    c = -np.sum(h_1d * np.log2(h_1d))
+    return c
+
 def main():
     im = cv2.imread(INPUT_IM_PATH, 0) # Read image as grayscale
     im = cv2.resize(im, WORKING_RES)
@@ -52,7 +60,6 @@ def main():
     plt.figure()
     plt.plot(h_1d)
     plt.show()
-
 
 
 if __name__=='__main__':
