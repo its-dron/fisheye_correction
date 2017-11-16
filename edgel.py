@@ -8,14 +8,15 @@ import os
 from skimage.feature import structure_tensor, structure_tensor_eigvals
 from skimage.transform import hough_line, hough_line_peaks
 from scipy.optimize import minimize
+from matplotlib import cm
 
 import ipdb as pdb
 
 IMAGES_DIR = 'images'
-WORKING_RES = (1000,1000)
+WORKING_RES = (100,100)
 INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_distorted.png')
 EDGEY_RATIO = 2
-N_THETA = 180
+N_THETA = 10
 
 def objective_fn(vars_to_optimize, im_edge):
     '''
@@ -41,12 +42,21 @@ def hough_entropy(edges, n_theta=10):
     theta = np.linspace(-np.pi/2, np.pi/2, n_theta);
     h,theta,d = hough_line(edges, theta=theta)
 
+    plt.imshow(np.log(1+h),
+            extent=[np.rad2deg(theta[-1]), np.rad2deg(theta[0]), d[-1], d[0]],
+            cmap=cm.gray)
+    plt.title('Hough Space')
+    plt.axis('equal')
+    plt.xlabel('Angle')
+    plt.ylabel('Radius')
+    plt.show()
+
     h_1d = np.sum(h, axis=0)
 
     return h_1d
 
 
-def computeEdgeSaliency(im, edge_ratio=2):
+def computeEdgeSaliency(im, sigma=1, edge_ratio=2):
     """
     Compute the edge saliency of the grayscale image `im`.
 
@@ -59,8 +69,18 @@ def computeEdgeSaliency(im, edge_ratio=2):
     """
 
     # compute gradient images
-    st = structure_tensor(im)
-    eig_max, eig_min = structure_tensor_eigvals(*st)
+    Ixx, Ixy, Iyy = structure_tensor(im)
+    data = np.array([[Ixx.flatten(), Ixy.flatten()], [Ixy.flatten(), Iyy.flatten()]])
+    data = data.transpose()
+
+    lamb, v = np.linalg.eig(data)
+    sort_idx = np.argsort(lamb, axis=1)
+
+    pdb.set_trace()
+    i = np.arange(im.size).reshape([-1,1])
+    lamb = lamb[i, sort_idx]
+
+    #eig_max, eig_min = structure_tensor_eigvals(*st)
 
     phi = eig_max - (edge_ratio * eig_min)
     edge_sal = phi
