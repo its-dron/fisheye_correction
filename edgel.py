@@ -36,8 +36,14 @@ def cost(h_1d):
     return c
 
 
-def hough_entropy(edges):
-    pass
+def hough_entropy(edges, n_theta=10):
+    # Classic straight-line Hough transform
+    theta = np.linspace(-np.pi/2, np.pi/2, n_theta);
+    h,theta,d = hough_line(edges, theta=theta)
+
+    h_1d = np.sum(h, axis=0)
+
+    return h_1d
 
 
 def computeEdgeSaliency(im, edge_ratio=2):
@@ -76,18 +82,9 @@ def main():
 
     # TODO Perform Edgel Subsampling
 
-    # Classic straight-line Hough transform
-    theta = np.linspace(-np.pi/2, np.pi/2, N_THETA);
-    h, _, d = hough_line(edge_sal, theta=theta)
+    h_1d = hough_entropy(edge_sal, N_THETA)
+    print(h_1d)
 
-    plt.imshow(h)
-    plt.title('Classic Hough (Intensity = Votes)')
-    plt.xlabel('Angle')
-    plt.ylabel('Radial Distance')
-    plt.axes().set_aspect('equal', adjustable='box')
-    plt.show()
-
-    h_1d = np.sum(h, axis=0)
     return
 
     plt.figure()
