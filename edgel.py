@@ -15,8 +15,8 @@ import ipdb as pdb
 IMAGES_DIR = 'images'
 WORKING_RES = (1000,1000)
 #INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'smirkle.png')
-#INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_distorted.png')
-INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_input.png')
+INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_distorted.png')
+#INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_input.png')
 EDGEY_RATIO = 2
 N_THETA = 180
 
@@ -35,7 +35,7 @@ def cost(h_1d):
     Compute the 1D hough entropy
     '''
     h_1d /= np.sum(h_1d) # Normalize the 1D hough
-    c = -np.sum(h_1d * np.log2(h_1d))
+    c = -np.sum(h_1d * np.log2(h_1d + 1e-6))
     return c
 
 
@@ -138,10 +138,11 @@ def main():
 
     plt.bar(center, hist, align='center', width=width)
     plt.show()
-    return
 
-    h_1d = hough_entropy(edge_sal, N_THETA)
-    print(h_1d)
+    #h_1d = hough_entropy(edge_sal, N_THETA)
+    h_1d = hist
+    energy = cost(h_1d)
+    print(energy)
 
     return
 
