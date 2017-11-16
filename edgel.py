@@ -14,9 +14,11 @@ import ipdb as pdb
 
 IMAGES_DIR = 'images'
 WORKING_RES = (1000,1000)
-INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_distorted.png')
+#INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'smirkle.png')
+#INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_distorted.png')
+INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_input.png')
 EDGEY_RATIO = 2
-N_THETA = 10
+N_THETA = 180
 
 def objective_fn(vars_to_optimize, im_edge):
     '''
@@ -71,7 +73,7 @@ def computeEdgeSaliency(im, sigma=1, edge_ratio=2):
     h,w = im.shape
 
     # compute gradient images
-    Ixx, Ixy, Iyy = structure_tensor(im)
+    Ixx, Ixy, Iyy = structure_tensor(im, sigma=1.414, mode='reflect')
     data = np.array([[Ixx.flatten(), Ixy.flatten()], [Ixy.flatten(), Iyy.flatten()]])
     data = data.transpose()
 
@@ -100,7 +102,7 @@ def main():
 
     edge_sal, eigvec = computeEdgeSaliency(im, edge_ratio = EDGEY_RATIO)
 
-    #plt.imshow(edge_sal)
+    #plt.imshow(edge_sal.reshape([h,w]))
     #plt.title('Edge Saliency')
     #plt.axis('equal')
     #plt.show()
@@ -108,10 +110,33 @@ def main():
     # TODO Perform Edgel Subsampling
 
     # Get orientation
-    orient = np.arctan(eigvec[:,0] / eigvec[:,1])
+    orient = np.arctan2(eigvec[:,0], eigvec[:,1])
+    orient %= np.pi
 
-    orient_hist, edges = np.histogram(orient, bins=N_THETA, density=True)
-    plt.plot(orient_hist)
+    #plt.imshow(orient.reshape([h,w]))
+    #plt.title('Orientation')
+    #plt.axis('equal')
+    #plt.show()
+
+    #orient_hist, edges = np.histogram(orient, bins=N_THETA)
+    #orient_hist /= np.sum(orient_hist)
+
+    #theta_bins = np.linspace(-np.pi/2, np.pi/2, N_THETA);
+    theta_bins = np.linspace(-np.pi, np.pi, N_THETA+1);
+    bin_ids = np.digitize(orient, theta_bins, right=True)
+
+    hist = np.zeros(N_THETA)
+    for i in range(N_THETA):
+        hist[i] = np.sum((bin_ids == i) * (edge_sal > 0))
+        #hist[i] = np.sum(edge_sal[bin_ids == i])
+
+
+    hist /= np.sum(hist)
+
+    center = (theta_bins[:-1] + theta_bins[1:]) / 2
+    width = 0.7*(theta_bins[1] - theta_bins[0])
+
+    plt.bar(center, hist, align='center', width=width)
     plt.show()
     return
 
