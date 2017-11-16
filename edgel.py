@@ -13,7 +13,7 @@ from matplotlib import cm
 import ipdb as pdb
 
 IMAGES_DIR = 'images'
-WORKING_RES = (100,100)
+WORKING_RES = (1000,1000)
 INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_distorted.png')
 EDGEY_RATIO = 2
 N_THETA = 10
@@ -65,8 +65,10 @@ def computeEdgeSaliency(im, sigma=1, edge_ratio=2):
         edge_ratio - minimum ratio of max to min eigenvlue to count as edge
 
     Returns:
-        edgels     - edge saliency image. Same shape as `im`
+        edge_sal   - edge saliency image. Same shape as `im`
+        eig_vec    - vector of smaller eigen vectors. in [y,x] format.
     """
+    h,w = im.shape
 
     # compute gradient images
     Ixx, Ixy, Iyy = structure_tensor(im)
@@ -74,26 +76,29 @@ def computeEdgeSaliency(im, sigma=1, edge_ratio=2):
     data = data.transpose()
 
     lamb, v = np.linalg.eig(data)
-    sort_idx = np.argsort(lamb, axis=1)
 
-    pdb.set_trace()
+    # Sort ascending by eigenvalue
+    sort_idx = np.argsort(lamb, axis=1)
     i = np.arange(im.size).reshape([-1,1])
     lamb = lamb[i, sort_idx]
+    v = v[i, sort_idx]
 
-    #eig_max, eig_min = structure_tensor_eigvals(*st)
+    small_eigvec = v[:,:,0]
 
-    phi = eig_max - (edge_ratio * eig_min)
-    edge_sal = phi
+    # max_eig - e*min_eig
+    phi = lamb[:,1] - (edge_ratio * lamb[:,0])
+    edge_sal = phi#.reshape([h,w])
     edge_sal[edge_sal<0] = 0
 
-    return edge_sal
+    return edge_sal, small_eigvec
 
 
 def main():
     im = cv2.imread(INPUT_IM_PATH, 0) # Read image as grayscale
     im = cv2.resize(im, WORKING_RES)
+    h,w = im.shape
 
-    edge_sal = computeEdgeSaliency(im, edge_ratio = EDGEY_RATIO)
+    edge_sal, eigvec = computeEdgeSaliency(im, edge_ratio = EDGEY_RATIO)
 
     #plt.imshow(edge_sal)
     #plt.title('Edge Saliency')
@@ -101,6 +106,14 @@ def main():
     #plt.show()
 
     # TODO Perform Edgel Subsampling
+
+    # Get orientation
+    orient = np.arctan(eigvec[:,0] / eigvec[:,1])
+
+    orient_hist, edges = np.histogram(orient, bins=N_THETA, density=True)
+    plt.plot(orient_hist)
+    plt.show()
+    return
 
     h_1d = hough_entropy(edge_sal, N_THETA)
     print(h_1d)
