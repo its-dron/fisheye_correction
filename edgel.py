@@ -22,7 +22,7 @@ N_THETA = 180
 
 EPS = 1e-6
 
-DEBUG = True
+DEBUG = False
 
 def objective_fn(vars_to_optimize, im_edge):
     """
@@ -81,7 +81,7 @@ def compute_edge_saliency(im, sigma=1, edge_ratio=2):
         edge_ratio - minimum ratio of max to min eigenvlue to count as edge
 
     Returns:
-        edge_sal   - edge saliency image. Same shape as `im`
+        edge_sal   - edge saliency image. 2 x (h*w)
         eig_vec    - vector of smaller eigen vectors. in [y,x] format.
     """
     h,w = im.shape
@@ -108,6 +108,34 @@ def compute_edge_saliency(im, sigma=1, edge_ratio=2):
 
     return edge_sal, small_eigvec
 
+def edge_orientations_binning(edge_sal, tangent, n_theta=10):
+    """
+    Compute weighted edge votes over angles.
+
+    Inputs:
+        edge_sal   - edge saliency per pixel. 2 x (h*w)
+        tangent    - tangent vector at each pixel. 2 x (h*w)
+
+    Returns:
+        hist       - weighted histogram of edge orientation. n_theta bins
+        theta_bins - edges of histogram bins, from -pi to pi
+    """
+    # Get orientation
+    orient = np.arctan2(tangent[:,0], tangent[:,1])
+    orient %= np.pi
+
+    #theta_bins = np.linspace(-np.pi/2, np.pi/2, N_THETA);
+    theta_bins = np.linspace(-np.pi, np.pi, n_theta+1);
+    bin_ids = np.digitize(orient, theta_bins, right=True)
+
+    hist = np.zeros(n_theta)
+    for i in range(n_theta):
+        hist[i] = np.sum((bin_ids == i) * (edge_sal))
+        #hist[i] = np.sum(edge_sal[bin_ids == i])
+
+
+    hist /= np.sum(hist)
+    return hist, theta_bins
 
 def main():
     im = cv2.imread(INPUT_IM_PATH, 0) # Read image as grayscale
@@ -116,33 +144,15 @@ def main():
 
     edge_sal, eigvec = compute_edge_saliency(im, edge_ratio = EDGEY_RATIO)
 
-    #plt.imshow(edge_sal.reshape([h,w]))
-    #plt.title('Edge Saliency')
-    #plt.axis('equal')
-    #plt.show()
+    if DEBUG:
+        plt.imshow(edge_sal.reshape([h,w]))
+        plt.title('Edge Saliency')
+        plt.axis('equal')
+        plt.show()
 
     # TODO Perform Edgel Subsampling
 
-    # Get orientation
-    orient = np.arctan2(eigvec[:,0], eigvec[:,1])
-    orient %= np.pi
-
-    #plt.imshow(orient.reshape([h,w]))
-    #plt.title('Orientation')
-    #plt.axis('equal')
-    #plt.show()
-
-    #theta_bins = np.linspace(-np.pi/2, np.pi/2, N_THETA);
-    theta_bins = np.linspace(-np.pi, np.pi, N_THETA+1);
-    bin_ids = np.digitize(orient, theta_bins, right=True)
-
-    hist = np.zeros(N_THETA)
-    for i in range(N_THETA):
-        hist[i] = np.sum((bin_ids == i) * (edge_sal))
-        #hist[i] = np.sum(edge_sal[bin_ids == i])
-
-
-    hist /= np.sum(hist)
+    hist, theta_bins = edge_orientations_binning(edge_sal, eigvec, n_theta=N_THETA)
 
     center = (theta_bins[:-1] + theta_bins[1:]) / 2
     width = 0.7*(theta_bins[1] - theta_bins[0])
@@ -150,16 +160,11 @@ def main():
     plt.bar(center, hist, align='center', width=width)
     plt.show()
 
-    #h_1d = hough_1d(edge_sal, N_THETA)
-    h_1d = hist
-    energy = cost(h_1d)
+    #hist = hough_1d(edge_sal, N_THETA)
+    energy = cost(hist)
     print(energy)
 
     return
-
-    plt.figure()
-    plt.plot(h_1d)
-    plt.show()
 
 if __name__=='__main__':
     main()
