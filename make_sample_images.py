@@ -6,6 +6,8 @@ import cv2
 import matplotlib.pyplot as plt
 import os
 
+import ipdb as pdb
+
 IMAGES_DIR = 'images'
 
 # Image of vertical stripes
@@ -23,29 +25,31 @@ cv2.imwrite(os.path.join(IMAGES_DIR, 'stripes_input.png'), stripes)
 # Distortion Params
 x_0 = w//2
 y_0 = h//2
-K = np.eye(3)
-K[0,0] = x_0
-K[1,1] = y_0
-K[0,2] = x_0
-K[1,2] = y_0
-d = np.array([0., 0., 0., 0.])
+focal_length = 1000 # Just an arbitrary decent value for a (1000,1000) working image
+
+# Construct Camera Intrinsic Matrix
+K = np.array(
+    [[focal_length,            0,     x_0],
+     [           0, focal_length,     y_0],
+     [           0,            0,       1]])
+d = np.array([0., 0., 0., 0.]) # distortion coefficients that will later have to be optimized over
 
 # This does some magic to have the output be a good size
-Knew, valid_roi = cv2.getOptimalNewCameraMatrix(K, d, (w,h), 1)
 K_inv = np.linalg.inv(K)
 
 # Get pixel coordinates
 X,Y = np.meshgrid(range(w),range(h))
 
 # Get ideal image coordinates my multiplying by K_inv
-pts = np.vstack((X.flatten(), Y.flatten(), np.ones(h*w)))
+pts = np.vstack((X.flatten(), Y.flatten(), np.ones(h*w))) # homo coordinates of size (3,n_pixels)
 pts_c = np.dot(K_inv, pts)
+#pts_c /= pts_c[2,:]
 x_c = pts_c[0,:]
 y_c = pts_c[1,:]
 
 # Compute distortion amount
 r = np.sqrt(x_c**2 + y_c**2)
-th = np.arctan(r)
+th = np.arctan(r) # th is shape (n_pixels,)
 
 th_2 = th*th
 th_4 = th_2*th_2
@@ -66,16 +70,14 @@ scale = r / scale
 # Reshape distortion scalar
 scale = scale.reshape(h,w)
 
-# This is equivilant to K_new * diag(scale,scale,1) * K_inv * [x,y,1]
-x_p = Knew[0,0] / K[0,0] * (X - x_0) * scale + Knew[0,2]
-y_p = Knew[1,1] / K[1,1] * (Y - y_0) * scale + Knew[1,2]
+x_p = (X - x_0) * scale + K[0,2]
+y_p = (Y - y_0) * scale + K[1,2]
 
 # Convert to the right dtype for remap
 m1 = x_p.astype(np.float32)
 m2 = y_p.astype(np.float32)
 
-
-distorted_im = cv2.remap(stripes, 
+distorted_im = cv2.remap(stripes,
                          m1,
                          m2,
                          interpolation=cv2.INTER_LINEAR)
