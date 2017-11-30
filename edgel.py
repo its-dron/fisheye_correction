@@ -14,14 +14,15 @@ import fisheye_tools as ft
 import ipdb as pdb
 
 IMAGES_DIR = 'images'
-WORKING_RES = (1000,1000)
-FOCAL_LENGTH = 1000 # Starting focal length guess
+MAX_SIZE = 500
+FOCAL_LENGTH = 500 # Starting focal length guess
 EDGEY_RATIO = 2
 N_THETA = 180
 eps = 1e-6
 
 #INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'smirkle.png')
 INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_distorted.png')
+INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'city.jpg')
 #INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_input.png')
 
 def objective_fn(fd, im):
@@ -114,15 +115,25 @@ def computeEdgeSaliency(im, sigma=1, edge_ratio=2):
 
     return edge_sal, small_eigvec
 
+def resize_if_big(im, max_size):
+    ''' Resizes image and keeps aspect ratio to have max
+    resolution of max_size '''
+    im_shape = im.shape[0:2]
+    scale = 1
+    if np.max(im_shape)>max_size:
+        scale = max_size/np.max(im_shape);
+        im = cv2.resize(im, (int(scale*im_shape[1]), int(scale*im_shape[0])))
+    return im, scale
+
 def main():
     im = cv2.imread(INPUT_IM_PATH, 0) # Read image as grayscale
-    im = cv2.resize(im, WORKING_RES)
+    im, scale = resize_if_big(im, MAX_SIZE)
     h,w = im.shape
     ft.plot(im, "Input Image")
 
     # distortion coefficients that will later have to be optimized over
     # Because we also need to optimize the focal length, it is included
-    df = np.array([FOCAL_LENGTH, 0., 0., 0., 0.])
+    df = np.array([FOCAL_LENGTH*scale, 0., 0., 0., 0.])
 
     # Note that we also have to optimize FOCAL_LENGTH
     optim_fd = minimize(objective_fn, df,  args=(im), method='Nelder-Mead',
