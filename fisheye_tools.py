@@ -106,8 +106,10 @@ def main():
     x_0 = WORKING_RES[1] // 2
     y_0 = WORKING_RES[0] // 2
 
-    stripe_im = create_stripe_image()
-    plot(stripe_im, "Input Stripe Image")
+    # Get input iage
+    #input_im = create_stripe_image()
+    input_im = cv2.imread(INPUT_IM_PATH, 0) # Read image as grayscale
+    plot(input_im, "Input Stripe Image")
 
     # distortion coefficients that will later have to be optimized over
     d = np.array([0., 0., 0., 0.])
@@ -118,7 +120,7 @@ def main():
 
     # distort image
     scale = construct_scale(r, th_d, WORKING_RES)
-    fisheye_im = apply_scale(stripe_im, scale, K)
+    fisheye_im = apply_scale(input_im, scale, K)
     plot(fisheye_im, "Fisheye Image")
 
     # undistort the fisheye image

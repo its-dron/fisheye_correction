@@ -15,14 +15,14 @@ import ipdb as pdb
 
 IMAGES_DIR = 'images'
 MAX_SIZE = 500
-FOCAL_LENGTH = 500 # Starting focal length guess
+FOCAL_LENGTH = 0.500 # Starting focal length guess
 EDGEY_RATIO = 2
 N_THETA = 180
 eps = 1e-6
 
 #INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'smirkle.png')
 INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_distorted.png')
-INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'city.jpg')
+INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'city2.jpg')
 #INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_input.png')
 
 def objective_fn(fd, im):
@@ -37,7 +37,7 @@ def objective_fn(fd, im):
     return c
 
 def apply_fd(fd, im):
-    f = fd[0]
+    f = fd[0] * 1000
     d = fd[1:]
     h,w = im.shape[0:2]
     x_0 = w // 2; y_0 = h // 2
@@ -137,12 +137,11 @@ def main():
 
     # Note that we also have to optimize FOCAL_LENGTH
     optim_fd = minimize(objective_fn, df,  args=(im), method='Nelder-Mead',
-            options={'xtol': 0.005, 'disp': True})
+            options={'xtol': 0.0005, 'disp': True})
     corrected_im = apply_fd(optim_fd.x, im)
-    ft.plot(corrected_im, "Optimal Image")
     print(optim_fd.x)
+    ft.plot(corrected_im, "Optimal Image")
     pdb.set_trace()
-
 
 if __name__=='__main__':
     main()
