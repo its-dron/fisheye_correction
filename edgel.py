@@ -10,39 +10,44 @@ from skimage.transform import hough_line, hough_line_peaks
 from scipy.optimize import minimize
 from matplotlib import cm
 
+import fisheye_tools as ft
 import ipdb as pdb
 
 IMAGES_DIR = 'images'
 WORKING_RES = (1000,1000)
-#INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'smirkle.png')
-INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_distorted.png')
-#INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_input.png')
+FOCAL_LENGTH = 1000 # Starting focal length guess
 EDGEY_RATIO = 2
 N_THETA = 180
 eps = 1e-6
 
-def objective_fn(vars_to_optimize, im_edge):
+#INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'smirkle.png')
+INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_distorted.png')
+#INPUT_IM_PATH = os.path.join(IMAGES_DIR, 'stripes_input.png')
+
+def objective_fn(fd, im):
     '''
     To be called:
         scipy.optimize.minimize(objective_fn, initial_guess,  args=(im_edge), method='Nelder-Mead')
     '''
+    corrected_im = apply_fd(fd,im)
+    h = hough_1d(corrected_im, n_theta=N_THETA)
+    c = cost(h)
+    print("Cost: %s" % c)
+    return c
 
-    # 1. Undistort im_edge by vars_to_optimize
-    # 2. Compute cost of newly undistorted
-    return cost(est_h_1d)
+def apply_fd(fd, im):
+    f = fd[0]
+    d = fd[1:]
+    h,w = im.shape[0:2]
+    x_0 = w // 2; y_0 = h // 2
+    K = ft.construct_K(f, f, x_0, y_0)
+    pts_c = ft.calibrated_im_coor(K, im.shape[0:2])
+    r, th_d = ft.get_distortion_amount(pts_c, d)
 
-def naive_objective_fn(vars_to_optimize, im):
-    '''
-    To be called:
-        scipy.optimize.minimize(objective_fn, initial_guess,  args=(im_edge), method='Nelder-Mead')
-    '''
-
-    # 1. Undistort im_edge by vars_to_optimize
-    # 2. Compute cost of newly undistorted
-
-    # Warp im according to vars_to_optimize
-    return cost(est_h_1d)
-
+    # undistort the fisheye image
+    scale = ft.construct_scale(th_d, r, im.shape[0:2])
+    corrected_im = ft.apply_scale(im, scale, K)
+    return corrected_im
 
 def cost(h_1d):
     '''
@@ -52,29 +57,12 @@ def cost(h_1d):
     c = -np.sum(h_1d * np.log2(h_1d + eps))
     return c
 
-def hough_entropy(edges, n_theta=10):
-    # Classic straight-line Hough transform
-    theta = np.linspace(-np.pi/2, np.pi/2, n_theta);
-    h,theta,d = hough_line(edges, theta=theta)
-
-    plt.imshow(np.log(1+h),
-            extent=[np.rad2deg(theta[-1]), np.rad2deg(theta[0]), d[-1], d[0]],
-            cmap=cm.gray)
-    plt.title('Hough Space')
-    plt.axis('equal')
-    plt.xlabel('Angle')
-    plt.ylabel('Radius')
-    plt.show()
-
-    h_1d = np.sum(h, axis=0)
-
-    return h_1d
-
-def naive_1d_hough_hist(warped_im, n_theta):
+def hough_1d(im, n_theta=N_THETA):
     '''
-    Takes in a warped image, and computes the 1D hough histogram
+    Takes in a grayscale image, and computes the 1D hough histogram of
+    the computed edgel image
     '''
-    edge_sal, eigvec = computeEdgeSaliency(warped_im, edge_ratio = EDGEY_RATIO)
+    edge_sal, eigvec = computeEdgeSaliency(im, edge_ratio = EDGEY_RATIO)
 
     # Get orientation
     orient = np.arctan2(eigvec[:,0], eigvec[:,1])
@@ -126,23 +114,24 @@ def computeEdgeSaliency(im, sigma=1, edge_ratio=2):
 
     return edge_sal, small_eigvec
 
-def warp(im, params):
-    pass
-
 def main():
     im = cv2.imread(INPUT_IM_PATH, 0) # Read image as grayscale
     im = cv2.resize(im, WORKING_RES)
     h,w = im.shape
+    ft.plot(im, "Input Image")
 
-    warp(im);
-    # Attempt at dewarp
-    return
-    hist = naive_1d_hough_hist(im, N_THETA)
-    energy = cost(hist)
-    print(energy)
+    # distortion coefficients that will later have to be optimized over
+    # Because we also need to optimize the focal length, it is included
+    df = np.array([FOCAL_LENGTH, 0., 0., 0., 0.])
 
-    #initial_guess
-    #scipy.optimize.minimize(naive_objective_fn, initial_guess,  args=(im_edge), method='Nelder-Mead')
+    # Note that we also have to optimize FOCAL_LENGTH
+    optim_fd = minimize(objective_fn, df,  args=(im), method='Nelder-Mead',
+            options={'xtol': 0.005, 'disp': True})
+    corrected_im = apply_fd(optim_fd.x, im)
+    ft.plot(corrected_im, "Optimal Image")
+    print(optim_fd.x)
+    pdb.set_trace()
+
 
 if __name__=='__main__':
     main()

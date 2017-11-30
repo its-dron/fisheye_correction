@@ -25,7 +25,7 @@ cv2.imwrite(os.path.join(IMAGES_DIR, 'stripes_input.png'), stripes)
 # Distortion Params
 x_0 = w//2
 y_0 = h//2
-focal_length = 1000 # Just an arbitrary decent value for a (1000,1000) working image
+focal_length = 789 # Just an arbitrary decent value for a (1000,1000) working image
 
 # Construct Camera Intrinsic Matrix
 K = np.array(

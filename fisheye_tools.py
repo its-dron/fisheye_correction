@@ -7,13 +7,10 @@ a more modularized version of make_sample_images.py
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-import os
-
-import ipdb as pdb
 
 IMAGES_DIR = 'images'
 WORKING_RES = (1000,1000)
-FOCAL_LENGTH = 1000
+FOCAL_LENGTH = 789
 STRIPE_WIDTH = 20
 
 def create_stripe_image(im_size=WORKING_RES, stripe_w=STRIPE_WIDTH):
